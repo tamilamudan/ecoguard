@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoGuard — Intelligent Home Safety & Security Simulation</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- JSZip for in-browser Project ZIP Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0284c7;
+    }
+    .white-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+      transition: all 0.2s ease;
+    }
+    .white-card:hover {
+      border-color: #cbd5e1;
+    }
+    .clean-grid-bg {
+      background-color: #f1f5f9;
+      background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.65; transform: scale(0.98); }
+    }
+    .animate-pulse-fast {
+      animation: pulse-fast 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes strobe-red-blue {
+      0%, 49% { background-color: #fef2f2; border-color: #ef4444; color: #991b1b; box-shadow: 0 0 12px rgba(239,68,68,0.25); }
+      50%, 100% { background-color: #eff6ff; border-color: #3b82f6; color: #1e40af; box-shadow: 0 0 12px rgba(59,130,246,0.25); }
+    }
+    .siren-active-badge {
+      animation: strobe-red-blue 0.6s infinite;
+    }
+    .scene-label {
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -100%);
+      transition: opacity 0.2s ease;
+      z-index: 10;
+    }
+    .kpi-pill {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+  </style>
+</head>
+<body class="clean-grid-bg min-h-screen flex flex-col select-none text-slate-800">
+
+  <!-- 1. PERSISTENT MANDATORY SIMULATION SAFETY BANNER -->
+  <div class="sticky top-0 z-50 w-full bg-amber-50/95 border-b border-amber-300 px-4 py-1.5 backdrop-blur-md">
+    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-2 font-mono font-bold tracking-wider text-amber-900">
+        <span class="inline-flex h-2 w-2 rounded-full bg-amber-500 animate-ping"></span>
+        <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+        <span>SIMULATION ONLY — NO REAL SENSORS OR EMERGENCY SERVICES CONNECTED</span>
+      </div>
+      <div class="hidden md:flex items-center gap-2 font-mono text-[11px] text-slate-700 bg-white px-3 py-0.5 rounded-full border border-slate-200 shadow-sm">
+        <span class="text-emerald-700 font-semibold"><i class="fa-solid fa-plug-circle-check mr-1"></i>Wired Sensors (Copper Bus)</span>
+        <span class="text-slate-400">→</span>
+        <span class="text-blue-700 font-semibold"><i class="fa-solid fa-microchip mr-1"></i>1 Central Controller</span>
+        <span class="text-slate-400">→</span>
+        <span class="text-sky-700 font-semibold"><i class="fa-solid fa-tower-broadcast mr-1"></i>LoRa 868MHz TX )))</span>
+        <span class="text-indigo-700 font-semibold">External Stations</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. TOP ENTERPRISE NAVIGATION BAR -->
+  <header class="w-full border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+            <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-display text-lg font-bold tracking-tight text-slate-900">EcoGuard</h1>
+              <span class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold">v2.4 Telemetry Suite</span>
+            </div>
+            <p class="text-[11px] text-slate-500">Wired Sensor Diagnostic &amp; LoRa Emergency Dispatch Platform</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Action Controls -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono">
+          <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-slate-500">BUS POLL:</span>
+          <span class="font-bold text-slate-800">10 Hz (100ms)</span>
+        </div>
+
+        <button id="btn-audio-toggle" onclick="toggleAudioMute()" class="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-mono flex items-center gap-1.5 text-slate-700 shadow-sm transition cursor-pointer" title="Toggle synthesized Web Audio alarm sound">
+          <i id="icon-audio" class="fa-solid fa-volume-high text-blue-600"></i>
+          <span id="text-audio">Audio: ON</span>
+        </button>
+
+        <button onclick="openDeploymentModal()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-2 shadow-sm transition cursor-pointer">
+          <i class="fa-solid fa-file-zipper text-sky-400"></i>
+          <span>Project ZIP &amp; Render Kit</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 3. TOP SUMMARY KPI METRIC STRIP -->
+  <section class="max-w-[1920px] w-full mx-auto px-4 pt-3">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      
+      <!-- KPI 1: Wired Sensor Bus -->
+      <div id="badge-wired-bus" class="white-card kpi-pill rounded-xl p-3 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Physical Copper Bus</span>
+          <span id="text-wired-bus" class="font-mono font-bold text-emerald-700 text-sm">3/3 CLOSED LOOP</span>
+          <span class="text-[10px] text-slate-500 block mt-0.5">0 Wireless Hops</span>
+        </div>
+        <div class="h-9 w-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+          <span id="dot-wired-bus" class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Central Edge Controller -->
+      <div id="badge-controller" class="white-card kpi-pill rounded-xl p-3 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">1 Central Controller</span>
+          <span id="text-controller-state" class="font-mono font-bold text-blue-700 text-sm">ARMED (LOCAL EDGE)</span>
+          <span class="text-[10px] text-emerald-600 font-medium block mt-0.5">Offline-Autonomous</span>
+        </div>
+        <div class="h-9 w-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+          <i class="fa-solid fa-microchip"></i>
+        </div>
+      </div>
+
+      <!-- KPI 3: Local House Siren -->
+      <div id="badge-siren" class="white-card kpi-pill rounded-xl p-3 flex items-center justify-between transition-all">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Local House Siren</span>
+          <span id="text-siren-state" class="font-mono font-bold text-slate-700 text-sm">STANDBY (SILENT)</span>
+          <span class="text-[10px] text-slate-500 block mt-0.5">110dB Piezo + Strobe</span>
+        </div>
+        <div class="h-9 w-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
+          <i id="icon-siren" class="fa-solid fa-bell"></i>
+        </div>
+      </div>
+
+      <!-- KPI 4: LoRa 868MHz Transceiver -->
+      <div id="badge-lora" class="white-card kpi-pill rounded-xl p-3 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">LoRa Emergency TX</span>
+          <span id="text-lora-state" class="font-mono font-bold text-sky-700 text-sm">ONLINE (868 MHz)</span>
+          <span class="text-[10px] text-slate-500 block mt-0.5">Controller → Stations</span>
+        </div>
+        <div class="h-9 w-9 rounded-xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600">
+          <i id="icon-lora" class="fa-solid fa-tower-broadcast"></i>
+        </div>
+      </div>
+
+      <!-- KPI 5: Anomaly Index -->
+      <div class="white-card kpi-pill rounded-xl p-3 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Z-Score Index</span>
+          <span id="kpi-anomaly-val" class="font-mono font-bold text-emerald-600 text-sm">0.08 σ (NORMAL)</span>
+          <span class="text-[10px] text-slate-500 block mt-0.5">Multivariate Drift</span>
+        </div>
+        <div class="h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+      </div>
+
+      <!-- KPI 6: Chargeable LiFePO4 UPS Power Pack -->
+      <div class="white-card kpi-pill rounded-xl p-3 flex items-center justify-between">
+        <div class="w-full pr-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400">LiFePO4 Backup UPS</span>
+            <span id="battery-text" class="font-mono font-bold text-emerald-700 text-xs">98% (13.4V)</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden my-1.5">
+            <div id="battery-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 98%"></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px]">
+            <span id="ups-charge-mode" class="text-slate-500">FLOAT CHARGING</span>
+            <button onclick="toggleUpsCharge()" class="text-blue-600 hover:text-blue-800 font-mono font-semibold underline cursor-pointer">Boost</button>
+          </div>
+        </div>
+        <div class="h-9 w-9 shrink-0 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+          <i class="fa-solid fa-battery-full"></i>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4. MAIN WORKSPACE GRID -->
+  <main class="flex-1 max-w-[1920px] w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+    <!-- TOP FULL-WIDTH 3D DIGITAL TWIN VIEWPORT -->
+    <section id="viewport-wrapper" class="lg:col-span-12 flex flex-col">
+      <div id="three-viewport-card" class="white-card rounded-2xl overflow-hidden flex flex-col relative h-[78vh] min-h-[620px] w-full shadow-md">
+        
+        <!-- Top Overlay Bar inside 3D Viewport -->
+        <div class="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+          <!-- Camera Room Presets -->
+          <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-mono uppercase text-slate-400 px-1.5 font-bold">Camera:</span>
+            <button onclick="setCameraView('overview')" class="px-2.5 py-1 rounded-lg text-[11px] font-mono bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-semibold transition cursor-pointer">Spacious Overview</button>
+            <button onclick="setCameraView('kitchen')" class="px-2.5 py-1 rounded-lg text-[11px] font-mono bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer">Kitchen</button>
+            <button onclick="setCameraView('living')" class="px-2.5 py-1 rounded-lg text-[11px] font-mono bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer">Living Lounge</button>
+            <button onclick="setCameraView('utility')" class="px-2.5 py-1 rounded-lg text-[11px] font-mono bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer">Controller Hub</button>
+            <button onclick="setCameraView('lora')" class="px-2.5 py-1 rounded-lg text-[11px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 font-semibold transition cursor-pointer">LoRa Range</button>
+          </div>
+
+          <!-- Quick Floating Hazard Triggers & Fullscreen Controls -->
+          <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 shadow-sm text-[11px] font-mono">
+            <button onclick="triggerScenario('gas')" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-semibold cursor-pointer flex items-center gap-1">
+              <i class="fa-solid fa-fire-burner text-amber-600"></i> Gas Leak
+            </button>
+            <button onclick="triggerScenario('earthquake')" class="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-300 font-semibold cursor-pointer flex items-center gap-1">
+              <i class="fa-solid fa-house-crack text-orange-600"></i> Quake
+            </button>
+            <button onclick="triggerScenario('fire')" class="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 font-semibold cursor-pointer flex items-center gap-1">
+              <i class="fa-solid fa-fire text-red-600"></i> Fire
+            </button>
+            <button onclick="resetSimulation()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold cursor-pointer">
+              <i class="fa-solid fa-rotate-right"></i> Reset
+            </button>
+            <span class="text-slate-300">|</span>
+            <button onclick="toggleLabels()" id="btn-toggle-labels" class="px-2 py-1 text-blue-700 hover:text-blue-900 font-semibold flex items-center gap-1 cursor-pointer">
+              <i class="fa-solid fa-tags"></i>
+              <span>Labels: ON</span>
+            </button>
+            <button onclick="toggleFullscreen3D()" id="btn-fullscreen-3d" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold flex items-center gap-1 cursor-pointer">
+              <i class="fa-solid fa-expand"></i>
+              <span>Full Screen</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Emergency Banner Overlay inside 3D Canvas -->
+        <div id="canvas-hazard-banner" class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-4 py-1.5 rounded-full bg-red-600 text-white font-mono text-xs font-bold tracking-wider shadow-lg flex items-center gap-2 animate-pulse-fast">
+          <i class="fa-solid fa-radiation text-amber-200"></i>
+          <span id="canvas-hazard-text">CRITICAL HAZARD DETECTED — LOCAL SIREN ACTIVE</span>
+        </div>
+
+        <!-- Three.js Canvas Container -->
+        <div id="three-canvas-container" class="w-full h-full relative cursor-grab active:cursor-grabbing bg-slate-200">
+          <div id="labels-container" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
+        </div>
+
+        <!-- Bottom Legend Overlay inside 3D Viewport -->
+        <div class="absolute bottom-2.5 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none text-[11px] font-mono">
+          <div class="flex flex-wrap items-center gap-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-700">
+            <span class="flex items-center gap-1.5 text-emerald-700 font-semibold">
+              <span class="inline-block w-3 h-1.5 bg-emerald-500 rounded"></span> Wired Sensor Conduit
+            </span>
+            <span class="flex items-center gap-1.5 text-red-600 font-semibold">
+              <span class="inline-block w-3 h-1.5 bg-red-500 rounded"></span> Triggered Wire Bus
+            </span>
+            <span class="flex items-center gap-1.5 text-sky-700 font-semibold">
+              <i class="fa-solid fa-wifi"></i> LoRa RF (Controller → Stations Only)
+            </span>
+          </div>
+          <div class="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-xl border border-slate-200 shadow-sm text-slate-500 hidden sm:block">
+            Drag to Orbit • Scroll to Zoom • Right-Click to Pan
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOTTOM LEFT COLUMN: 4 SCENARIO TRIGGERS & WIRED TELEMETRY GAUGES -->
+    <section class="lg:col-span-4 flex flex-col gap-4">
+      
+      <!-- Scenario Command Deck -->
+      <div class="white-card rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="h-6 w-6 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 text-xs">
+              <i class="fa-solid fa-sliders"></i>
+            </span>
+            <h2 class="font-display font-bold text-sm uppercase tracking-wider text-slate-900">Hazard Simulation Deck</h2>
+          </div>
+          <span class="text-[10px] font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-semibold">4-Channel Control</span>
+        </div>
+        <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+          Inject simulated hazards onto the physical copper sensor bus. Observe the live 3D house response, local siren, and LoRa dispatch.
+        </p>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <!-- 1. Gas Leak -->
+          <button id="btn-scen-gas" onclick="triggerScenario('gas')" class="group relative flex flex-col items-start p-3 rounded-xl bg-slate-50 hover:bg-amber-50/90 border border-slate-200 hover:border-amber-400 transition text-left cursor-pointer shadow-sm">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="h-7 w-7 rounded-lg bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 text-xs">
+                <i class="fa-solid fa-fire-burner"></i>
+              </span>
+              <span id="pill-scen-gas" class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">Standby</span>
+            </div>
+            <span class="font-bold text-xs text-slate-900 group-hover:text-amber-900">1. Gas Leak</span>
+            <span class="text-[10px] text-slate-500 font-mono">Kitchen → Fire Sta.</span>
+          </button>
+
+          <!-- 2. Earthquake -->
+          <button id="btn-scen-quake" onclick="triggerScenario('earthquake')" class="group relative flex flex-col items-start p-3 rounded-xl bg-slate-50 hover:bg-orange-50/90 border border-slate-200 hover:border-orange-400 transition text-left cursor-pointer shadow-sm">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="h-7 w-7 rounded-lg bg-orange-100 border border-orange-300 flex items-center justify-center text-orange-700 text-xs">
+                <i class="fa-solid fa-house-crack"></i>
+              </span>
+              <span id="pill-scen-quake" class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">Standby</span>
+            </div>
+            <span class="font-bold text-xs text-slate-900 group-hover:text-orange-900">2. Earthquake</span>
+            <span class="text-[10px] text-slate-500 font-mono">Slab → Hospital</span>
+          </button>
+
+          <!-- 3. House Fire -->
+          <button id="btn-scen-fire" onclick="triggerScenario('fire')" class="group relative flex flex-col items-start p-3 rounded-xl bg-slate-50 hover:bg-red-50/90 border border-slate-200 hover:border-red-400 transition text-left cursor-pointer shadow-sm">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="h-7 w-7 rounded-lg bg-red-100 border border-red-300 flex items-center justify-center text-red-600 text-xs">
+                <i class="fa-solid fa-fire"></i>
+              </span>
+              <span id="pill-scen-fire" class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">Standby</span>
+            </div>
+            <span class="font-bold text-xs text-slate-900 group-hover:text-red-800">3. House Fire</span>
+            <span class="text-[10px] text-slate-500 font-mono">Living → Fire Sta.</span>
+          </button>
+
+          <!-- 4. Reset Simulation -->
+          <button onclick="resetSimulation()" class="group relative flex flex-col items-start p-3 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200 hover:border-blue-400 transition text-left cursor-pointer shadow-sm">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="h-7 w-7 rounded-lg bg-blue-100 border border-blue-300 flex items-center justify-center text-blue-600 text-xs">
+                <i class="fa-solid fa-rotate-right"></i>
+              </span>
+              <span class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-blue-200/70 text-blue-800 font-semibold">Clear All</span>
+            </div>
+            <span class="font-bold text-xs text-blue-900">4. Reset System</span>
+            <span class="text-[10px] text-blue-700 font-mono">Restore Normal</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Wired Sensors Live Telemetry List -->
+      <div class="white-card rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="h-6 w-6 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xs">
+              <i class="fa-solid fa-network-wired"></i>
+            </span>
+            <h2 class="font-display font-bold text-sm uppercase tracking-wider text-slate-900">Wired Sensor Channels</h2>
+          </div>
+          <span class="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">Hardwired Bus</span>
+        </div>
+        <p class="text-xs text-slate-500 mb-3">
+          Physical copper conduits connect each room sensor directly to the Central Controller.
+        </p>
+
+        <div id="sensor-cards-container" class="space-y-2.5">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- BOTTOM CENTER COLUMN: CENTRAL CONTROLLER & AI ENGINE -->
+    <section class="lg:col-span-5 flex flex-col gap-4">
+
+      <div class="white-card rounded-2xl p-4 flex-1 flex flex-col justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-200 pb-2.5">
+          <div class="flex items-center gap-2.5">
+            <div class="h-8 w-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+              <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div>
+              <h2 class="font-display font-bold text-sm uppercase tracking-wider text-slate-900">1 Central Controller &amp; Edge Diagnostic Engine</h2>
+              <p class="text-xs text-slate-500">Processes all physical sensor wires locally without internet access.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-semibold">
+              STM32H7 Edge MCU + SX1276 LoRa
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          
+          <!-- Column A: Rule Engine -->
+          <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-scale-balanced text-blue-600"></i>
+                1. Deterministic Rule Engine
+              </span>
+              <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold">Primary Trigger</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-2">
+              Hard real-time threshold evaluation on wired inputs:
+            </p>
+            <div id="rule-engine-list" class="space-y-1.5 font-mono text-[11px]">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Column B: Statistical Anomaly Classifier -->
+          <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <i class="fa-solid fa-chart-line text-indigo-600"></i>
+                  2. Statistical Anomaly Classifier
+                </span>
+                <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 font-semibold">Z-Score Model</span>
+              </div>
+              <p class="text-[11px] text-slate-600 mb-2 leading-relaxed">
+                <strong class="text-slate-800">Transparency Note:</strong> Evaluates multivariate Z-score drift across wired channels (<code class="text-indigo-700 font-semibold">S = √(Σ((x_i - μ_i)/σ_i)²)</code>).
+              </p>
+            </div>
+
+            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-mono mb-1">
+                <span class="text-slate-500">Composite Anomaly Score:</span>
+                <span id="ai-anomaly-score" class="font-bold text-emerald-600">0.08 (NORMAL)</span>
+              </div>
+              <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-2">
+                <div id="ai-anomaly-bar" class="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 transition-all duration-300" style="width: 4%"></div>
+              </div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-500">
+                <span>LoRa Dispatch Vector:</span>
+                <span id="ai-target-routing" class="text-blue-700 font-bold">NONE (STANDBY)</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: EXTERNAL RECEIVING STATIONS -->
+    <section id="lora-rx-section" class="lg:col-span-3 flex flex-col gap-4">
+
+      <div class="white-card rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="h-6 w-6 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 text-xs">
+              <i class="fa-solid fa-building-shield"></i>
+            </span>
+            <h2 class="font-display font-bold text-sm uppercase tracking-wider text-slate-900">External Receiving Stations</h2>
+          </div>
+          <span class="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 font-semibold">Simulated RX</span>
+        </div>
+
+        <div class="space-y-2.5">
+          
+          <!-- 1. Fire Station Panel -->
+          <div id="station-card-fire" class="bg-slate-50 rounded-xl p-3 border border-slate-200 transition-all">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="h-7 w-7 rounded-lg bg-red-100 border border-red-200 flex items-center justify-center text-red-600 text-xs">
+                  <i class="fa-solid fa-fire-extinguisher"></i>
+                </span>
+                <div>
+                  <h3 class="font-bold text-xs text-slate-900 leading-none">Fire &amp; Hazmat Station</h3>
+                  <span class="text-[10px] text-slate-500 font-mono">Routes: House Fire &amp; Gas Leak</span>
+                </div>
+              </div>
+              <span id="station-status-fire" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">Standby</span>
+            </div>
+            <div id="station-msg-fire" class="text-[11px] font-mono text-slate-600 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 mt-1.5">
+              No active dispatch packets received.
+            </div>
+          </div>
+
+          <!-- 2. Hospital Panel -->
+          <div id="station-card-hospital" class="bg-slate-50 rounded-xl p-3 border border-slate-200 transition-all">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="h-7 w-7 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xs">
+                  <i class="fa-solid fa-truck-medical"></i>
+                </span>
+                <div>
+                  <h3 class="font-bold text-xs text-slate-900 leading-none">Emergency Medical Hospital</h3>
+                  <span class="text-[10px] text-slate-500 font-mono">Routes: Earthquake Seismic Trauma</span>
+                </div>
+              </div>
+              <span id="station-status-hospital" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">Standby</span>
+            </div>
+            <div id="station-msg-hospital" class="text-[11px] font-mono text-slate-600 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 mt-1.5">
+              No active dispatch packets received.
+            </div>
+          </div>
+
+          <!-- 3. Police Station Panel -->
+          <div id="station-card-police" class="bg-slate-50 rounded-xl p-3 border border-slate-200 transition-all">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="h-7 w-7 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 text-xs">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </span>
+                <div>
+                  <h3 class="font-bold text-xs text-slate-900 leading-none">Police Dispatch Station</h3>
+                  <span class="text-[10px] text-slate-500 font-mono">Routes: Auxiliary Civic Link</span>
+                </div>
+              </div>
+              <span id="station-status-police" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">Standby</span>
+            </div>
+            <div id="station-msg-police" class="text-[11px] font-mono text-slate-600 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 mt-1.5">
+              No active dispatch packets received.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- 5. DEPLOYMENT MODAL -->
+  <div id="deployment-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-slate-200 shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-slate-50">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-600">
+            <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
+          </div>
+          <div>
+            <h2 class="font-display font-bold text-base text-slate-900">EcoGuard — Complete Render.com Deployment Package</h2>
+            <p class="text-xs text-slate-500">Includes <code class="text-sky-700 font-semibold">app.py</code>, <code class="text-sky-700 font-semibold">requirements.txt</code>, <code class="text-sky-700 font-semibold">render.yaml</code>, <code class="text-sky-700 font-semibold">static/index.html</code> &amp; <code class="text-sky-700 font-semibold">README.md</code></p>
+          </div>
+        </div>
+        <button onclick="closeDeploymentModal()" class="h-8 w-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+        <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="space-y-1 max-w-xl">
+            <div class="font-bold text-sky-900 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-box-archive text-sky-600"></i>
+              One-Click Deployable Project ZIP Generator
+            </div>
+            <p class="text-slate-600 leading-relaxed">
+              Click <strong>Download Complete Project (.ZIP)</strong> below to bundle this entire live 3D simulation along with the Python Flask backend and Render configuration.
+            </p>
+          </div>
+          <button id="btn-download-zip" onclick="downloadProjectZip()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer">
+            <i class="fa-solid fa-download"></i>
+            <span>Download Complete Project (.ZIP)</span>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+          <button onclick="showCodeTab('app.py')" id="tab-btn-app.py" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-sky-100 text-sky-800 border border-sky-300 font-semibold cursor-pointer">app.py</button>
+          <button onclick="showCodeTab('requirements.txt')" id="tab-btn-requirements.txt" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer">requirements.txt</button>
+          <button onclick="showCodeTab('render.yaml')" id="tab-btn-render.yaml" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer">render.yaml</button>
+          <button onclick="showCodeTab('README.md')" id="tab-btn-README.md" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer">README.md</button>
+        </div>
+
+        <div class="relative">
+          <button onclick="copyActiveCodeTab()" id="btn-copy-code" class="absolute top-3 right-3 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-[11px] border border-slate-600 cursor-pointer">
+            <i class="fa-regular fa-copy mr-1"></i>Copy File
+          </button>
+          <pre id="modal-code-content" class="bg-slate-900 p-4 rounded-xl border border-slate-800 font-mono text-[11px] text-emerald-400 overflow-x-auto leading-relaxed max-h-[340px] select-all"></pre>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+        <span>CDN Note: Three.js, Tailwind &amp; FontAwesome load via CDN on initial page load.</span>
+        <button onclick="closeDeploymentModal()" class="px-4 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold cursor-pointer">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- APPLICATION JAVASCRIPT: STATE MACHINE, SPACIOUS 3D SCENE & LORA LINK  -->
+  <!-- ===================================================================== -->
+  <script>
+    /*************************************************************************
+     * 1. SYSTEM STATE & SENSOR DEFINITIONS
+     *************************************************************************/
+    const SENSORS = {
+      gas: {
+        id: 'gas',
+        name: 'Gas Sensor (MQ-5)',
+        room: 'Spacious Kitchen',
+        unit: 'ppm',
+        normalVal: 140,
+        currentVal: 140,
+        threshold: 1000,
+        maxScale: 2500,
+        wireStatus: 'CLOSED_LOOP',
+        triggered: false,
+        stationTarget: 'fire',
+        pos3D: { x: -7.2, y: 1.5, z: -4.2 },
+        icon: 'fa-fire-burner'
+      },
+      earthquake: {
+        id: 'earthquake',
+        name: '3-Axis Accelerometer',
+        room: 'Foundation Slab',
+        unit: 'g PGA',
+        normalVal: 0.01,
+        currentVal: 0.01,
+        threshold: 0.25,
+        maxScale: 1.0,
+        wireStatus: 'CLOSED_LOOP',
+        triggered: false,
+        stationTarget: 'hospital',
+        pos3D: { x: -1.5, y: 0.3, z: -0.8 },
+        icon: 'fa-house-crack'
+      },
+      fire: {
+        id: 'fire',
+        name: 'Smoke & Temp Sensor',
+        room: 'Living Lounge',
+        unit: '°C / ppm',
+        normalVal: 24,
+        smokePpm: 15,
+        currentVal: 24,
+        threshold: 60,
+        maxScale: 110,
+        wireStatus: 'CLOSED_LOOP',
+        triggered: false,
+        stationTarget: 'fire',
+        pos3D: { x: -3.2, y: 3.1, z: 3.2 },
+        icon: 'fa-fire'
+      }
+    };
+
+    const CONTROLLER_POS = { x: 7.4, y: 1.8, z: -1.2 };
+    const LORA_ANTENNA_POS = { x: 7.8, y: 4.8, z: -1.2 };
+    const SIREN_POS = { x: 0.0, y: 3.3, z: 0.0 };
+
+    const STATIONS_3D = {
+      fire: {
+        id: 'fire',
+        name: 'Fire Station RX',
+        pos: { x: -17.5, y: 1.6, z: -13.5 },
+        color: 0xef4444,
+        status: 'Standby'
+      },
+      police: {
+        id: 'police',
+        name: 'Police Station RX',
+        pos: { x: 0.0, y: 1.6, z: -16.5 },
+        color: 0x3b82f6,
+        status: 'Standby'
+      },
+      hospital: {
+        id: 'hospital',
+        name: 'Hospital Medical RX',
+        pos: { x: 17.5, y: 1.6, z: -13.5 },
+        color: 0x10b981,
+        status: 'Standby'
+      }
+    };
+
+    const simState = {
+      activeScenarios: new Set(),
+      localSirenActive: false,
+      audioMuted: false,
+      labelsVisible: true,
+      packetCounter: 1040,
+      lastAnomalyScore: 0.08,
+      clockTime: 0,
+      upsBoostCharging: false,
+      upsSoc: 98.0
+    };
+
+    function toggleUpsCharge() {
+      simState.upsBoostCharging = !simState.upsBoostCharging;
+      const modeEl = document.getElementById('ups-charge-mode');
+      const txtEl = document.getElementById('battery-text');
+      const barEl = document.getElementById('battery-bar');
+      if (simState.upsBoostCharging) {
+        modeEl.textContent = 'BOOST CHARGING (14.2V)';
+        modeEl.className = 'text-emerald-700 font-bold';
+        txtEl.textContent = '100% (14.2V)';
+        barEl.style.width = '100%';
+      } else {
+        modeEl.textContent = 'FLOAT CHARGING';
+        modeEl.className = 'text-slate-500';
+        txtEl.textContent = '98% (13.4V)';
+        barEl.style.width = '98%';
+      }
+    }
+
+    /*************************************************************************
+     * 2. SYNTHESIZED WEB AUDIO API SIREN
+     *************************************************************************/
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+    }
+
+    function playSirenTone() {
+      if (simState.audioMuted || !simState.localSirenActive) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+
+        const now = audioCtx.currentTime;
+        osc.frequency.setValueAtTime(580, now);
+        osc.frequency.linearRampToValueAtTime(920, now + 0.28);
+        osc.frequency.linearRampToValueAtTime(580, now + 0.55);
+
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.005, now + 0.58);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      } catch (e) {}
+    }
+
+    function toggleAudioMute() {
+      simState.audioMuted = !simState.audioMuted;
+      const icon = document.getElementById('icon-audio');
+      const text = document.getElementById('text-audio');
+      if (simState.audioMuted) {
+        icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+        text.textContent = 'Audio: MUTE';
+      } else {
+        icon.className = 'fa-solid fa-volume-high text-sky-600';
+        text.textContent = 'Audio: ON';
+        if (simState.localSirenActive) playSirenTone();
+      }
+    }
+
+    /*************************************************************************
+     * 3. THREE.JS 3D CUTAWAY MODERN HOME & LORA SCENE
+     *************************************************************************/
+    let scene, camera, renderer, controls;
+    let houseGroup;
+    let sensorMeshes = {};
+    let wireLines = {};
+    let wirePulseParticles = [];
+    let loraWaveRings = [];
+    let fireParticles = [];
+    let gasCloudParticles = [];
+    let sirenLightRed, sirenLightBlue, sirenBeaconMesh;
+    let loraAntennaBeacon;
+    let floatingLabels = [];
+    let threeInitialized = false;
+
+    function initThreeJS() {
+      if (threeInitialized) return;
+      const container = document.getElementById('three-canvas-container');
+      if (!container) return;
+      const width = container.clientWidth || 800;
+      const height = container.clientHeight || 500;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xdbeafe);
+      scene.fog = new THREE.FogExp2(0xdbeafe, 0.009);
+
+      camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 250);
+      camera.position.set(0, 19.5, 25.5);
+
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+      } catch (err) {
+        console.warn('WebGLRenderer fallback triggered:', err);
+      }
+
+      if (typeof THREE.OrbitControls !== 'undefined' && renderer) {
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.maxPolarAngle = Math.PI / 2 - 0.03;
+        controls.minDistance = 6;
+        controls.maxDistance = 55;
+        controls.target.set(0, 1.5, -1.5);
+      }
+
+      threeInitialized = true;
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.95);
+      dirLight.position.set(18, 32, 22);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      scene.add(dirLight);
+
+      const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.45);
+      fillLight.position.set(-18, 14, -15);
+      scene.add(fillLight);
+
+      const groundGeo = new THREE.PlaneGeometry(120, 120);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.95, metalness: 0.05 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      const gridHelper = new THREE.GridHelper(90, 60, 0xcbd5e1, 0xdbeafe);
+      gridHelper.position.y = 0.01;
+      scene.add(gridHelper);
+
+      houseGroup = new THREE.Group();
+      scene.add(houseGroup);
+
+      buildSpaciousModernHouse();
+      buildCentralControllerAndLoRa();
+      buildWiredSensorsAndConduits();
+      buildExternalReceivingStations();
+      buildHazardEffects();
+
+      window.addEventListener('resize', onWindowResize);
+
+      setInterval(() => {
+        if (simState.localSirenActive) {
+          playSirenTone();
+        }
+      }, 650);
+    }
+
+    function buildSpaciousModernHouse() {
+      const outerPatioGeo = new THREE.BoxGeometry(18.6, 0.18, 15.0);
+      const outerPatioMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7, metalness: 0.1 });
+      const outerPatio = new THREE.Mesh(outerPatioGeo, outerPatioMat);
+      outerPatio.position.set(0, 0.09, 0.2);
+      outerPatio.receiveShadow = true;
+      houseGroup.add(outerPatio);
+
+      const slabGeo = new THREE.BoxGeometry(17.2, 0.36, 13.6);
+      const slabMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.1 });
+      const slab = new THREE.Mesh(slabGeo, slabMat);
+      slab.position.set(0, 0.18, 0);
+      slab.receiveShadow = true;
+      houseGroup.add(slab);
+
+      for (let i = 0; i < 3; i++) {
+        addBoxProp(3.4, 0.06, 7.6 + i * 1.1, 1.8, 0.1, 0.75, 0x475569);
+      }
+
+      addRoomFloor(-4.75, -3.35, 7.1, 6.3, 0xe2e8f0);
+      addRoomFloor(1.8, -3.35, 6.0, 6.3, 0xd6d3d1);
+      addRoomFloor(6.55, -2.5, 3.5, 8.0, 0xcbd5e1);
+      addRoomFloor(-3.4, 3.15, 9.8, 6.7, 0xe7e5e4);
+      addRoomFloor(-3.4, 3.2, 5.6, 3.8, 0x93c5fd);
+      addRoomFloor(4.9, 4.0, 6.8, 5.0, 0xdbeafe);
+
+      const exteriorWallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.15 });
+      const slateTrimMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.35, metalness: 0.35 });
+      const cedarWoodMat = new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.5, metalness: 0.1 });
+      const partitionMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.45, metalness: 0.1 });
+      const glassCurtainMat = new THREE.MeshStandardMaterial({
+        color: 0x0284c7,
+        transparent: true,
+        opacity: 0.28,
+        roughness: 0.05,
+        metalness: 0.85
+      });
+
+      addWall(0, 1.9, -6.65, 17.0, 3.1, 0.28, exteriorWallMat);
+      addWall(0, 3.5, -6.65, 17.2, 0.24, 0.38, cedarWoodMat);
+
+      addWall(-8.4, 1.9, -3.6, 0.28, 3.1, 6.0, exteriorWallMat);
+      addWall(-8.4, 0.8, 3.0, 0.28, 0.9, 7.2, slateTrimMat);
+      addWall(-8.4, 2.1, 3.0, 0.1, 1.8, 6.4, glassCurtainMat);
+      addWall(-8.4, 3.25, 3.0, 0.28, 0.4, 7.2, cedarWoodMat);
+
+      addWall(8.4, 1.9, 0, 0.28, 3.1, 13.5, exteriorWallMat);
+      addWall(8.4, 3.5, 0, 0.32, 0.24, 13.6, cedarWoodMat);
+
+      addWall(-2.5, 0.55, 6.65, 11.6, 0.42, 0.26, slateTrimMat);
+      addWall(-2.5, 1.15, 6.65, 11.6, 0.85, 0.1, glassCurtainMat);
+      addWall(6.4, 1.9, 6.65, 3.8, 3.1, 0.28, exteriorWallMat);
+
+      addWall(3.6, 3.35, 7.25, 3.2, 0.18, 1.6, cedarWoodMat);
+
+      addWall(-4.7, 1.15, -0.2, 6.8, 1.6, 0.18, partitionMat);
+      addWall(-4.7, 1.98, -0.2, 6.84, 0.08, 0.22, slateTrimMat);
+      addWall(-1.2, 1.15, -3.3, 0.18, 1.6, 6.2, partitionMat);
+      addWall(-1.2, 1.98, -3.3, 0.22, 0.08, 6.24, slateTrimMat);
+      addWall(4.8, 1.15, -2.5, 0.18, 1.6, 8.0, partitionMat);
+      addWall(4.8, 1.98, -2.5, 0.22, 0.08, 8.04, slateTrimMat);
+
+      addBoxProp(-5.8, 0.82, -5.8, 4.2, 0.9, 0.9, 0x334155);
+      addBoxProp(-5.8, 1.3, -5.8, 4.3, 0.08, 0.95, 0xffffff);
+      addBoxProp(-2.8, 1.4, -5.8, 1.2, 2.1, 0.9, 0x94a3b8);
+      addBoxProp(-4.8, 0.8, -3.2, 2.8, 0.85, 1.2, 0x334155);
+      addBoxProp(-4.8, 1.26, -3.2, 2.95, 0.08, 1.3, 0xffffff);
+      addBoxProp(-7.4, 0.8, -4.2, 0.5, 0.85, 0.5, 0xef4444);
+
+      addBoxProp(-4.6, 0.65, 2.8, 3.4, 0.55, 1.1, 0x475569);
+      addBoxProp(-4.6, 1.0, 2.3, 3.4, 0.45, 0.25, 0x334155);
+      addBoxProp(-5.7, 0.65, 3.9, 1.1, 0.55, 1.4, 0x475569);
+      addBoxProp(-3.2, 0.52, 4.1, 1.6, 0.35, 1.0, 0xd97706);
+      addBoxProp(-3.2, 0.58, 0.1, 3.0, 0.38, 0.45, 0x1e293b);
+
+      addBoxProp(1.8, 0.58, -4.2, 2.6, 0.4, 2.8, 0xb45309);
+      addBoxProp(1.8, 0.86, -4.1, 2.35, 0.3, 2.5, 0xffffff);
+      addBoxProp(1.8, 0.9, -3.5, 2.38, 0.28, 1.3, 0x0284c7);
+      addBoxProp(1.8, 1.35, -5.55, 2.8, 1.2, 0.18, 0x334155);
+
+      addBoxProp(7.8, 1.1, -3.2, 0.4, 1.1, 0.85, 0x10b981);
+
+      const sirenBaseGeo = new THREE.CylinderGeometry(0.38, 0.45, 0.25, 20);
+      const sirenBaseMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x450a0a });
+      sirenBeaconMesh = new THREE.Mesh(sirenBaseGeo, sirenBaseMat);
+      sirenBeaconMesh.position.set(SIREN_POS.x, SIREN_POS.y, SIREN_POS.z);
+      houseGroup.add(sirenBeaconMesh);
+
+      sirenLightRed = new THREE.PointLight(0xef4444, 0, 16);
+      sirenLightRed.position.set(SIREN_POS.x - 0.35, SIREN_POS.y - 0.2, SIREN_POS.z);
+      houseGroup.add(sirenLightRed);
+
+      sirenLightBlue = new THREE.PointLight(0x3b82f6, 0, 16);
+      sirenLightBlue.position.set(SIREN_POS.x + 0.35, SIREN_POS.y - 0.2, SIREN_POS.z);
+      houseGroup.add(sirenLightBlue);
+
+      register3DLabel('Spacious Kitchen', new THREE.Vector3(-4.8, 2.7, -4.5), 'room');
+      register3DLabel('Living Lounge', new THREE.Vector3(-3.4, 2.7, 3.5), 'room');
+      register3DLabel('Master Suite', new THREE.Vector3(1.8, 2.7, -4.5), 'room');
+      register3DLabel('Controller & Utility Wing', new THREE.Vector3(6.5, 2.9, -3.2), 'room');
+      register3DLabel('Entrance Foyer', new THREE.Vector3(4.2, 2.7, 4.8), 'room');
+    }
+
+    function addRoomFloor(x, z, w, d, colorHex) {
+      const geo = new THREE.PlaneGeometry(w, d);
+      const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.8 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.37, z);
+      mesh.receiveShadow = true;
+      houseGroup.add(mesh);
+    }
+
+    function addWall(x, y, z, w, h, d, mat) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      houseGroup.add(mesh);
+    }
+
+    function addBoxProp(x, y, z, w, h, d, colorHex) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.45 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      houseGroup.add(mesh);
+    }
+
+    /*************************************************************************
+     * 4. ONE CENTRAL CONTROLLER & LORA RF TRANSMITTER MAST
+     *************************************************************************/
+    function buildCentralControllerAndLoRa() {
+      const ctrlGeo = new THREE.BoxGeometry(0.45, 1.0, 0.9);
+      const ctrlMat = new THREE.MeshStandardMaterial({
+        color: 0x0284c7,
+        emissive: 0x0369a1,
+        emissiveIntensity: 0.35,
+        roughness: 0.3,
+        metalness: 0.4
+      });
+      const ctrlMesh = new THREE.Mesh(ctrlGeo, ctrlMat);
+      ctrlMesh.position.set(CONTROLLER_POS.x, CONTROLLER_POS.y, CONTROLLER_POS.z);
+      houseGroup.add(ctrlMesh);
+
+      const sirenPath = [
+        new THREE.Vector3(CONTROLLER_POS.x, CONTROLLER_POS.y + 0.4, CONTROLLER_POS.z),
+        new THREE.Vector3(CONTROLLER_POS.x, 3.3, CONTROLLER_POS.z),
+        new THREE.Vector3(SIREN_POS.x, SIREN_POS.y, SIREN_POS.z)
+      ];
+      const sirenCurve = new THREE.CatmullRomCurve3(sirenPath);
+      const sirenTubeGeo = new THREE.TubeGeometry(sirenCurve, 20, 0.038, 8, false);
+      const sirenTubeMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+      houseGroup.add(new THREE.Mesh(sirenTubeGeo, sirenTubeMat));
+
+      const mastGeo = new THREE.CylinderGeometry(0.06, 0.08, 3.0, 12);
+      const mastMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7 });
+      const mast = new THREE.Mesh(mastGeo, mastMat);
+      mast.position.set(LORA_ANTENNA_POS.x, 3.3, LORA_ANTENNA_POS.z);
+      houseGroup.add(mast);
+
+      const coaxGeo = new THREE.CylinderGeometry(0.04, 0.04, 3.0, 8);
+      const coaxMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+      const coax = new THREE.Mesh(coaxGeo, coaxMat);
+      coax.position.set(CONTROLLER_POS.x + 0.2, 3.3, CONTROLLER_POS.z);
+      houseGroup.add(coax);
+
+      const tipGeo = new THREE.SphereGeometry(0.24, 16, 16);
+      const tipMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
+      loraAntennaBeacon = new THREE.Mesh(tipGeo, tipMat);
+      loraAntennaBeacon.position.set(LORA_ANTENNA_POS.x, LORA_ANTENNA_POS.y, LORA_ANTENNA_POS.z);
+      houseGroup.add(loraAntennaBeacon);
+
+      register3DLabel('CENTRAL CONTROLLER (Wired Hub)', new THREE.Vector3(CONTROLLER_POS.x, CONTROLLER_POS.y + 0.85, CONTROLLER_POS.z), 'controller');
+      register3DLabel('LoRa TX Antenna (868MHz)', new THREE.Vector3(LORA_ANTENNA_POS.x, LORA_ANTENNA_POS.y + 0.6, LORA_ANTENNA_POS.z), 'lora');
+      register3DLabel('Local Siren & Strobe', new THREE.Vector3(SIREN_POS.x, SIREN_POS.y + 0.55, SIREN_POS.z), 'siren');
+    }
+
+    /*************************************************************************
+     * 5. SENSORS + VISIBLE PHYSICAL WIRES TO CENTRAL CONTROLLER
+     *************************************************************************/
+    function buildWiredSensorsAndConduits() {
+      Object.values(SENSORS).forEach((sensor) => {
+        const geo = new THREE.SphereGeometry(0.26, 20, 20);
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x10b981,
+          emissive: 0x059669,
+          emissiveIntensity: 0.5,
+          roughness: 0.2
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(sensor.pos3D.x, sensor.pos3D.y, sensor.pos3D.z);
+        houseGroup.add(mesh);
+        sensorMeshes[sensor.id] = mesh;
+
+        const start = new THREE.Vector3(sensor.pos3D.x, sensor.pos3D.y, sensor.pos3D.z);
+        const dropToConduitLevel = new THREE.Vector3(sensor.pos3D.x, 0.52, sensor.pos3D.z);
+        const routeX = new THREE.Vector3(CONTROLLER_POS.x - 0.5, 0.52, sensor.pos3D.z);
+        const routeZ = new THREE.Vector3(CONTROLLER_POS.x - 0.5, 0.52, CONTROLLER_POS.z);
+        const end = new THREE.Vector3(CONTROLLER_POS.x, CONTROLLER_POS.y, CONTROLLER_POS.z);
+
+        const curve = new THREE.CatmullRomCurve3([start, dropToConduitLevel, routeX, routeZ, end]);
+        curve.curveType = 'catmullrom';
+        curve.tension = 0.15;
+
+        const tubeGeo = new THREE.TubeGeometry(curve, 44, 0.05, 8, false);
+        const tubeMat = new THREE.MeshStandardMaterial({
+          color: 0x10b981,
+          emissive: 0x047857,
+          emissiveIntensity: 0.35,
+          roughness: 0.4
+        });
+        const wireMesh = new THREE.Mesh(tubeGeo, tubeMat);
+        houseGroup.add(wireMesh);
+
+        wireLines[sensor.id] = {
+          mesh: wireMesh,
+          curve: curve
+        };
+
+        const pulseGeo = new THREE.SphereGeometry(0.1, 10, 10);
+        const pulseMat = new THREE.MeshBasicMaterial({ color: 0x059669 });
+        const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
+        houseGroup.add(pulseMesh);
+
+        wirePulseParticles.push({
+          sensorId: sensor.id,
+          mesh: pulseMesh,
+          curve: curve,
+          t: Math.random(),
+          speed: 0.005
+        });
+
+        register3DLabel(sensor.name, new THREE.Vector3(sensor.pos3D.x, sensor.pos3D.y + 0.5, sensor.pos3D.z), 'sensor', sensor.id);
+      });
+    }
+
+    /*************************************************************************
+     * 6. EXTERNAL RECEIVING STATIONS (FIRE, POLICE, HOSPITAL)
+     *************************************************************************/
+    function buildExternalReceivingStations() {
+      // 1. Fire Station RX (Red Theme)
+      buildStationGroup(STATIONS_3D.fire, 0xef4444, 0x991b1b, 'Fire Station RX (LoRa RX)');
+      // 2. Police Station RX (Blue & White Theme)
+      buildStationGroup(STATIONS_3D.police, 0x2563eb, 0xffffff, 'Police Station RX (LoRa RX)');
+      // 3. Hospital Medical RX (Medical White & Red Cross Theme)
+      buildStationGroup(STATIONS_3D.hospital, 0xffffff, 0xdc2626, 'Hospital Medical RX (LoRa RX)');
+    }
+
+    function buildStationGroup(st, bldgColor, accentColor, labelText) {
+      const stGroup = new THREE.Group();
+      stGroup.position.set(st.pos.x, 0, st.pos.z);
+
+      const bldgGeo = new THREE.BoxGeometry(3.2, 3.2, 2.6);
+      const bldgMat = new THREE.MeshStandardMaterial({
+        color: bldgColor,
+        roughness: 0.3
+      });
+      const bldg = new THREE.Mesh(bldgGeo, bldgMat);
+      bldg.position.y = 1.6;
+      bldg.castShadow = true;
+      stGroup.add(bldg);
+
+      // Accent trim roof/base
+      const roofGeo = new THREE.BoxGeometry(3.4, 0.25, 2.8);
+      const roofMat = new THREE.MeshStandardMaterial({ color: accentColor, roughness: 0.4 });
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.y = 3.32;
+      stGroup.add(roof);
+
+      const towerGeo = new THREE.CylinderGeometry(0.07, 0.16, 2.2, 10);
+      const towerMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
+      const tower = new THREE.Mesh(towerGeo, towerMat);
+      tower.position.y = 4.45;
+      stGroup.add(tower);
+
+      const topGeo = new THREE.SphereGeometry(0.28, 16, 16);
+      const topMat = new THREE.MeshBasicMaterial({ color: st.color });
+      const topMesh = new THREE.Mesh(topGeo, topMat);
+      topMesh.position.y = 5.6;
+      stGroup.add(topMesh);
+
+      scene.add(stGroup);
+      st.beaconMesh = topMesh;
+
+      register3DLabel(labelText, new THREE.Vector3(st.pos.x, 6.2, st.pos.z), 'station');
+    }
+
+    /*************************************************************************
+     * 7. 3D HAZARD PARTICLE EFFECTS
+     *************************************************************************/
+    function buildHazardEffects() {
+      for (let i = 0; i < 28; i++) {
+        const isSmoke = i >= 16;
+        const pGeo = new THREE.SphereGeometry(isSmoke ? 0.28 : 0.2, 8, 8);
+        const pMat = new THREE.MeshBasicMaterial({
+          color: isSmoke ? 0x64748b : (i % 2 === 0 ? 0xef4444 : 0xf59e0b),
+          transparent: true,
+          opacity: 0
+        });
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        pMesh.position.set(
+          -3.2 + (Math.random() - 0.5) * 1.1,
+          0.7 + Math.random() * 2.0,
+          3.2 + (Math.random() - 0.5) * 1.1
+        );
+        houseGroup.add(pMesh);
+        fireParticles.push({ mesh: pMesh, isSmoke, baseY: 0.7 });
+      }
+
+      for (let i = 0; i < 18; i++) {
+        const gGeo = new THREE.SphereGeometry(0.3, 10, 10);
+        const gMat = new THREE.MeshBasicMaterial({
+          color: 0xf59e0b,
+          transparent: true,
+          opacity: 0
+        });
+        const gMesh = new THREE.Mesh(gGeo, gMat);
+        gMesh.position.set(
+          -7.2 + (Math.random() - 0.5) * 1.4,
+          0.9 + Math.random() * 1.6,
+          -4.2 + (Math.random() - 0.5) * 1.4
+        );
+        houseGroup.add(gMesh);
+        gasCloudParticles.push({ mesh: gMesh });
+      }
+    }
+
+    function spawnLoRaWaveRing(targetStationId) {
+      const targetStation = STATIONS_3D[targetStationId];
+      if (!targetStation) return;
+
+      const startVec = new THREE.Vector3(LORA_ANTENNA_POS.x, LORA_ANTENNA_POS.y, LORA_ANTENNA_POS.z);
+      const endVec = new THREE.Vector3(targetStation.pos.x, 5.4, targetStation.pos.z);
+
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          const ringGeo = new THREE.TorusGeometry(0.32, 0.06, 10, 24);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x0284c7,
+            transparent: true,
+            opacity: 0.95
+          });
+          const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+          ringMesh.position.copy(startVec);
+          ringMesh.lookAt(endVec);
+          scene.add(ringMesh);
+
+          loraWaveRings.push({
+            mesh: ringMesh,
+            start: startVec.clone(),
+            end: endVec.clone(),
+            t: 0
+          });
+        }, i * 240);
+      }
+    }
+
+    /*************************************************************************
+     * 8. FLOATING 3D HTML LABELS
+     *************************************************************************/
+    function register3DLabel(text, posVec3, type, sensorId = null) {
+      const container = document.getElementById('labels-container');
+      const div = document.createElement('div');
+      div.className = 'scene-label px-2.5 py-0.5 rounded-md text-[10px] font-mono whitespace-nowrap border shadow-sm ';
+
+      if (type === 'room') {
+        div.className += 'bg-white/90 text-slate-700 border-slate-300 font-semibold';
+      } else if (type === 'controller') {
+        div.className += 'bg-blue-600 text-white border-blue-700 font-bold';
+      } else if (type === 'lora') {
+        div.className += 'bg-sky-600 text-white border-sky-700 font-bold';
+      } else if (type === 'station') {
+        div.className += 'bg-indigo-600 text-white border-indigo-700 font-bold';
+      } else {
+        div.className += 'bg-emerald-50/95 text-emerald-800 border-emerald-400 font-semibold';
+      }
+
+      div.textContent = text;
+      container.appendChild(div);
+
+      floatingLabels.push({
+        element: div,
+        pos: posVec3,
+        type: type,
+        sensorId: sensorId
+      });
+    }
+
+    function updateFloatingLabels() {
+      if (!camera || !houseGroup) return;
+      const container = document.getElementById('three-canvas-container');
+      if (!container) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      floatingLabels.forEach((lbl) => {
+        if (!simState.labelsVisible) {
+          lbl.element.style.opacity = '0';
+          return;
+        }
+        const worldPos = lbl.pos.clone();
+        if (lbl.type !== 'station') {
+          worldPos.add(houseGroup.position);
+        }
+        worldPos.project(camera);
+
+        if (worldPos.z > 1) {
+          lbl.element.style.opacity = '0';
+        } else {
+          const x = (worldPos.x * 0.5 + 0.5) * width;
+          const y = (-(worldPos.y * 0.5) + 0.5) * height;
+          lbl.element.style.left = `${x}px`;
+          lbl.element.style.top = `${y}px`;
+          lbl.element.style.opacity = '1';
+        }
+      });
+    }
+
+    function toggleLabels() {
+      simState.labelsVisible = !simState.labelsVisible;
+      const btn = document.getElementById('btn-toggle-labels');
+      btn.innerHTML = `<i class="fa-solid fa-tags"></i><span>Labels: ${simState.labelsVisible ? 'ON' : 'OFF'}</span>`;
+    }
+
+    function toggleFullscreen3D() {
+      const card = document.getElementById('three-viewport-card');
+      const btn = document.getElementById('btn-fullscreen-3d');
+      if (!document.fullscreenElement) {
+        if (card.requestFullscreen) {
+          card.requestFullscreen();
+        }
+        btn.innerHTML = '<i class="fa-solid fa-compress"></i><span>Exit Full Screen</span>';
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+        btn.innerHTML = '<i class="fa-solid fa-expand"></i><span>Full Screen</span>';
+      }
+      setTimeout(onWindowResize, 150);
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const btn = document.getElementById('btn-fullscreen-3d');
+      if (btn) {
+        if (document.fullscreenElement) {
+          btn.innerHTML = '<i class="fa-solid fa-compress"></i><span>Exit Full Screen</span>';
+        } else {
+          btn.innerHTML = '<i class="fa-solid fa-expand"></i><span>Full Screen</span>';
+        }
+      }
+      setTimeout(onWindowResize, 100);
+    });
+
+    function setCameraView(preset) {
+      if (!threeInitialized || !camera) {
+        initThreeJS();
+      }
+      if (preset === 'overview') {
+        animateCameraTo({ x: 0, y: 19.5, z: 25.5 }, { x: 0, y: 1.5, z: -1.5 });
+      } else if (preset === 'kitchen') {
+        animateCameraTo({ x: -11.5, y: 8.5, z: 3.5 }, { x: -5.5, y: 1.2, z: -3.8 });
+      } else if (preset === 'living') {
+        animateCameraTo({ x: -1.5, y: 8.8, z: 14.5 }, { x: -3.2, y: 1.2, z: 3.2 });
+      } else if (preset === 'utility') {
+        animateCameraTo({ x: 13.5, y: 8.5, z: 5.0 }, { x: 6.8, y: 1.8, z: -1.5 });
+      } else if (preset === 'lora') {
+        animateCameraTo({ x: 0, y: 28, z: 32 }, { x: 0, y: 1.0, z: -7.5 });
+      }
+    }
+
+    function animateCameraTo(camPos, targetPos) {
+      if (!camera) return;
+      camera.position.set(camPos.x, camPos.y, camPos.z);
+      if (controls && controls.target) {
+        controls.target.set(targetPos.x, targetPos.y, targetPos.z);
+        controls.update();
+      } else {
+        camera.lookAt(targetPos.x, targetPos.y, targetPos.z);
+      }
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('three-canvas-container');
+      if (!container || !renderer || !camera) return;
+      const w = container.clientWidth || 800;
+      const h = container.clientHeight || 500;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
+    /*************************************************************************
+     * 9. MAIN ANIMATION LOOP
+     *************************************************************************/
+    function animate() {
+      requestAnimationFrame(animate);
+      simState.clockTime += 0.04;
+
+      if (houseGroup) {
+        if (simState.activeScenarios.has('earthquake')) {
+          houseGroup.position.x = Math.sin(simState.clockTime * 16) * 0.2 + (Math.random() - 0.5) * 0.08;
+          houseGroup.position.z = Math.cos(simState.clockTime * 14) * 0.16;
+          houseGroup.rotation.z = Math.sin(simState.clockTime * 12) * 0.015;
+        } else {
+          houseGroup.position.set(0, 0, 0);
+          houseGroup.rotation.set(0, 0, 0);
+        }
+      }
+
+      wirePulseParticles.forEach((wp) => {
+        const sensor = SENSORS[wp.sensorId];
+        wp.speed = sensor.triggered ? 0.022 : 0.0045;
+        wp.t += wp.speed;
+        if (wp.t > 1) wp.t = 0;
+
+        const pt = wp.curve.getPointAt(wp.t);
+        wp.mesh.position.copy(pt);
+        wp.mesh.material.color.setHex(sensor.triggered ? 0xef4444 : 0x059669);
+        const s = sensor.triggered ? 1.6 : 0.95;
+        wp.mesh.scale.set(s, s, s);
+      });
+
+      const fireActive = simState.activeScenarios.has('fire');
+      fireParticles.forEach((fp) => {
+        if (!fireActive) {
+          fp.mesh.material.opacity = 0;
+          return;
+        }
+        fp.mesh.position.y += fp.isSmoke ? 0.04 : 0.028;
+        if (fp.mesh.position.y > (fp.isSmoke ? 3.8 : 2.3)) {
+          fp.mesh.position.y = fp.baseY;
+        }
+        fp.mesh.material.opacity = fp.isSmoke ? 0.5 : 0.88;
+      });
+
+      const gasActive = simState.activeScenarios.has('gas');
+      gasCloudParticles.forEach((gp, idx) => {
+        if (!gasActive) {
+          gp.mesh.material.opacity = 0;
+          return;
+        }
+        gp.mesh.position.y = 1.1 + Math.sin(simState.clockTime + idx) * 0.6;
+        gp.mesh.material.opacity = 0.4 + Math.sin(simState.clockTime * 2 + idx) * 0.15;
+      });
+
+      if (sirenLightRed && sirenLightBlue && sirenBeaconMesh) {
+        if (simState.localSirenActive) {
+          const flashPhase = Math.sin(simState.clockTime * 8) > 0;
+          sirenLightRed.intensity = flashPhase ? 3.5 : 0.1;
+          sirenLightBlue.intensity = flashPhase ? 0.1 : 3.5;
+          sirenBeaconMesh.material.emissive.setHex(flashPhase ? 0xef4444 : 0x3b82f6);
+        } else {
+          sirenLightRed.intensity = 0;
+          sirenLightBlue.intensity = 0;
+          sirenBeaconMesh.material.emissive.setHex(0x450a0a);
+        }
+      }
+
+      for (let i = loraWaveRings.length - 1; i >= 0; i--) {
+        const lw = loraWaveRings[i];
+        lw.t += 0.022;
+        if (lw.t >= 1.0) {
+          if (scene) scene.remove(lw.mesh);
+          loraWaveRings.splice(i, 1);
+        } else {
+          lw.mesh.position.lerpVectors(lw.start, lw.end, lw.t);
+          const scale = 1 + lw.t * 2.6;
+          lw.mesh.scale.set(scale, scale, scale);
+          lw.mesh.material.opacity = 1 - lw.t * 0.8;
+        }
+      }
+
+      if (controls) controls.update();
+      updateFloatingLabels();
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
+    }
+
+    /*************************************************************************
+     * 10. SCENARIO CONTROLS & LORA ROUTING
+     *************************************************************************/
+    function triggerScenario(scenarioKey) {
+      initAudio();
+
+      if (simState.activeScenarios.has(scenarioKey)) {
+        simState.activeScenarios.delete(scenarioKey);
+        restoreScenarioSensors(scenarioKey);
+      } else {
+        simState.activeScenarios.add(scenarioKey);
+        applyScenarioSensors(scenarioKey);
+      }
+
+      evaluateCentralController();
+    }
+
+    function applyScenarioSensors(scenarioKey) {
+      if (scenarioKey === 'gas') {
+        SENSORS.gas.currentVal = 1850;
+      } else if (scenarioKey === 'earthquake') {
+        SENSORS.earthquake.currentVal = 0.68;
+      } else if (scenarioKey === 'fire') {
+        SENSORS.fire.currentVal = 84;
+        SENSORS.fire.smokePpm = 780;
+      }
+    }
+
+    function restoreScenarioSensors(scenarioKey) {
+      if (scenarioKey === 'gas') {
+        SENSORS.gas.currentVal = SENSORS.gas.normalVal;
+      } else if (scenarioKey === 'earthquake') {
+        SENSORS.earthquake.currentVal = SENSORS.earthquake.normalVal;
+      } else if (scenarioKey === 'fire') {
+        SENSORS.fire.currentVal = SENSORS.fire.normalVal;
+        SENSORS.fire.smokePpm = 15;
+      }
+    }
+
+    function resetSimulation() {
+      simState.activeScenarios.clear();
+      simState.localSirenActive = false;
+
+      Object.values(SENSORS).forEach((s) => {
+        s.currentVal = s.normalVal;
+        s.triggered = false;
+      });
+      SENSORS.fire.smokePpm = 15;
+
+      ['fire', 'police', 'hospital'].forEach((stKey) => {
+        updateStationUI(stKey, 'Standby', 'No active dispatch packets received.', 'slate');
+      });
+
+      evaluateCentralController();
+    }
+
+    /*************************************************************************
+     * 11. CENTRAL CONTROLLER EVALUATION
+     *************************************************************************/
+    function evaluateCentralController() {
+      const triggeredHazards = [];
+      const targetStations = new Set();
+      let sumSquaredZ = 0;
+
+      Object.values(SENSORS).forEach((s) => {
+        const isTrig = s.currentVal >= s.threshold;
+        s.triggered = isTrig;
+
+        const sigma = Math.max((s.threshold - s.normalVal) * 0.28, 0.05);
+        const z = (s.currentVal - s.normalVal) / sigma;
+        sumSquaredZ += z * z;
+
+        if (isTrig) {
+          triggeredHazards.push(s);
+          targetStations.add(s.stationTarget);
+          if (sensorMeshes[s.id]) {
+            sensorMeshes[s.id].material.color.setHex(0xef4444);
+            sensorMeshes[s.id].material.emissive.setHex(0xdc2626);
+          }
+          if (wireLines[s.id]) {
+            wireLines[s.id].mesh.material.color.setHex(0xef4444);
+            wireLines[s.id].mesh.material.emissive.setHex(0xb91c1c);
+          }
+        } else {
+          if (sensorMeshes[s.id]) {
+            sensorMeshes[s.id].material.color.setHex(0x10b981);
+            sensorMeshes[s.id].material.emissive.setHex(0x059669);
+          }
+          if (wireLines[s.id]) {
+            wireLines[s.id].mesh.material.color.setHex(0x10b981);
+            wireLines[s.id].mesh.material.emissive.setHex(0x047857);
+          }
+        }
+      });
+
+      const rawScore = Math.sqrt(sumSquaredZ) / 10;
+      const anomalyScore = Math.min(Math.max(rawScore, 0.06), 0.99);
+      simState.lastAnomalyScore = anomalyScore;
+
+      simState.localSirenActive = triggeredHazards.length > 0;
+      if (simState.localSirenActive) {
+        playSirenTone();
+      }
+
+      updateScenarioPills();
+      renderSensorCards();
+      renderControllerDecisionEngine(triggeredHazards, targetStations, anomalyScore);
+      updateTopHeaderBadges(triggeredHazards);
+
+      if (triggeredHazards.length > 0) {
+        dispatchLoRaAlerts(triggeredHazards, Array.from(targetStations));
+      } else {
+        ['fire', 'police', 'hospital'].forEach((stKey) => {
+          updateStationUI(stKey, 'Standby', 'No active dispatch packets received.', 'slate');
+        });
+      }
+    }
+
+    function dispatchLoRaAlerts(triggeredHazards, stationList) {
+      simState.packetCounter++;
+      const pktId = `PKT-${simState.packetCounter}`;
+      const timestamp = new Date().toLocaleTimeString();
+
+      stationList.forEach((stKey) => {
+        spawnLoRaWaveRing(stKey);
+      });
+
+      stationList.forEach((stKey) => {
+        updateStationUI(stKey, 'Transmitting', `[${timestamp}] Receiving LoRa frame ${pktId} over 868MHz...`, 'cyan');
+      });
+
+      setTimeout(() => {
+        if (simState.activeScenarios.size === 0) return;
+        stationList.forEach((stKey) => {
+          updateStationUI(stKey, 'Delivered', `[${timestamp}] Frame ${pktId} verified (CRC OK). Verifying dispatch...`, 'blue');
+        });
+      }, 450);
+
+      setTimeout(() => {
+        if (simState.activeScenarios.size === 0) return;
+
+        stationList.forEach((stKey) => {
+          const hazardNames = triggeredHazards
+            .filter(h => h.stationTarget === stKey)
+            .map(h => `${h.name} (${h.currentVal} ${h.unit})`)
+            .join(' + ');
+          updateStationUI(
+            stKey,
+            'Acknowledged',
+            `[${timestamp}] ACK sent for ${pktId}. Simulated Alert: ${hazardNames}.`,
+            'emerald'
+          );
+        });
+      }, 950);
+    }
+
+    function updateStationUI(stKey, statusText, messageText, colorTheme) {
+      const card = document.getElementById(`station-card-${stKey}`);
+      const badge = document.getElementById(`station-status-${stKey}`);
+      const msg = document.getElementById(`station-msg-${stKey}`);
+
+      badge.textContent = statusText;
+      msg.textContent = messageText;
+
+      const colorMap = {
+        slate: 'bg-slate-200 text-slate-600 border-slate-300',
+        cyan: 'bg-sky-100 text-sky-800 border-sky-300 font-semibold',
+        blue: 'bg-blue-100 text-blue-800 border-blue-300 font-semibold',
+        emerald: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold'
+      };
+      badge.className = `text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${colorMap[colorTheme] || colorMap.slate}`;
+
+      if (colorTheme === 'emerald' || colorTheme === 'cyan') {
+        card.className = 'bg-sky-50/70 rounded-xl p-3 border border-sky-300 shadow-sm transition-all';
+      } else {
+        card.className = 'bg-slate-50 rounded-xl p-3 border border-slate-200 transition-all';
+      }
+    }
+
+    /*************************************************************************
+     * 12. DASHBOARD UI RENDERING HELPERS
+     *************************************************************************/
+    function renderSensorCards() {
+      const container = document.getElementById('sensor-cards-container');
+      container.innerHTML = '';
+
+      Object.values(SENSORS).forEach((s) => {
+        const pct = Math.min(Math.round((s.currentVal / s.maxScale) * 100), 100);
+        let barColor = 'bg-emerald-500';
+        let borderClass = 'border-slate-200 bg-slate-50';
+        let statusBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold">WIRE OK</span>`;
+
+        if (s.triggered) {
+          barColor = 'bg-red-500';
+          borderClass = 'border-red-300 bg-red-50/70';
+          statusBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-600 text-white font-bold animate-pulse">HAZARD</span>`;
+        }
+
+        const displayValue = s.id === 'fire'
+          ? `${s.currentVal}°C / ${s.smokePpm}ppm`
+          : `${s.currentVal} ${s.unit}`;
+
+        const cardHtml = `
+          <div class="p-3 rounded-xl border ${borderClass} transition-all shadow-sm">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <div class="flex items-center gap-1.5">
+                <i class="fa-solid ${s.icon} ${s.triggered ? 'text-red-600' : 'text-sky-600'} text-xs"></i>
+                <span class="font-bold text-slate-800 text-xs">${s.name}</span>
+              </div>
+              ${statusBadge}
+            </div>
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-500 mb-1.5">
+              <span>Location: ${s.room}</span>
+              <span class="font-bold ${s.triggered ? 'text-red-600' : 'text-emerald-700'}">${displayValue}</span>
+            </div>
+            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div class="h-full ${barColor} transition-all duration-300" style="width: ${Math.max(pct, 6)}%"></div>
+            </div>
+          </div>
+        `;
+        container.insertAdjacentHTML('beforeend', cardHtml);
+      });
+    }
+
+    function renderControllerDecisionEngine(triggeredHazards, targetStations, anomalyScore) {
+      const ruleList = document.getElementById('rule-engine-list');
+      const rules = [
+        { label: 'RULE_1: GAS_PPM >= 1000', pass: SENSORS.gas.triggered },
+        { label: 'RULE_2: SEISMIC_PGA >= 0.25g', pass: SENSORS.earthquake.triggered },
+        { label: 'RULE_3: TEMP >= 60°C | SMOKE', pass: SENSORS.fire.triggered }
+      ];
+
+      ruleList.innerHTML = rules.map(r => {
+        return `<div class="flex items-center justify-between px-2.5 py-1 rounded-lg ${r.pass ? 'bg-red-100 text-red-800 border border-red-300 font-bold' : 'bg-white text-slate-600 border border-slate-200'}">
+          <span>${r.label}</span>
+          <span>${r.pass ? 'TRIGGERED [TRUE]' : 'NORMAL [FALSE]'}</span>
+        </div>`;
+      }).join('');
+
+      const scoreEl = document.getElementById('ai-anomaly-score');
+      const barEl = document.getElementById('ai-anomaly-bar');
+      const routeEl = document.getElementById('ai-target-routing');
+      const kpiAnomalyEl = document.getElementById('kpi-anomaly-val');
+
+      const pct = Math.round(anomalyScore * 100);
+      barEl.style.width = `${pct}%`;
+
+      if (triggeredHazards.length > 0) {
+        scoreEl.textContent = `${anomalyScore.toFixed(2)} (CRITICAL ANOMALY)`;
+        scoreEl.className = 'font-bold text-red-600';
+        routeEl.textContent = `LORA TX → ${Array.from(targetStations).map(s => s.toUpperCase()).join(' + ')}`;
+        routeEl.className = 'text-red-600 font-bold';
+        if (kpiAnomalyEl) {
+          kpiAnomalyEl.textContent = `${anomalyScore.toFixed(2)} σ (ANOMALY)`;
+          kpiAnomalyEl.className = 'font-mono font-bold text-red-600 text-sm';
+        }
+      } else {
+        scoreEl.textContent = `${anomalyScore.toFixed(2)} (BASELINE NORMAL)`;
+        scoreEl.className = 'font-bold text-emerald-600';
+        routeEl.textContent = 'NONE (STANDBY)';
+        routeEl.className = 'text-blue-700 font-bold';
+        if (kpiAnomalyEl) {
+          kpiAnomalyEl.textContent = `${anomalyScore.toFixed(2)} σ (NORMAL)`;
+          kpiAnomalyEl.className = 'font-mono font-bold text-emerald-600 text-sm';
+        }
+      }
+    }
+
+    function updateTopHeaderBadges(triggeredHazards) {
+      const badgeSiren = document.getElementById('badge-siren');
+      const textSiren = document.getElementById('text-siren-state');
+      const iconSiren = document.getElementById('icon-siren');
+      const canvasBanner = document.getElementById('canvas-hazard-banner');
+      const canvasBannerText = document.getElementById('canvas-hazard-text');
+
+      if (simState.localSirenActive) {
+        badgeSiren.className = 'white-card rounded-xl p-3 flex items-center justify-between transition-all siren-active-badge';
+        textSiren.textContent = 'SIREN & STROBE ACTIVE';
+        textSiren.className = 'font-mono font-bold text-sm';
+        iconSiren.className = 'fa-solid fa-bell animate-bounce';
+
+        canvasBanner.classList.remove('hidden');
+        const names = triggeredHazards.map(h => h.name.split(' ')[0].toUpperCase()).join(' + ');
+        canvasBannerText.textContent = `EMERGENCY: ${names} DETECTED — LOCAL SIREN & LORA DISPATCH ACTIVE`;
+      } else {
+        badgeSiren.className = 'white-card kpi-pill rounded-xl p-3 flex items-center justify-between transition-all';
+        textSiren.textContent = 'STANDBY (SILENT)';
+        textSiren.className = 'font-mono font-bold text-slate-700 text-sm';
+        iconSiren.className = 'fa-solid fa-bell text-slate-600';
+        canvasBanner.classList.add('hidden');
+      }
+    }
+
+    function updateScenarioPills() {
+      const map = [
+        { key: 'gas', pillId: 'pill-scen-gas' },
+        { key: 'earthquake', pillId: 'pill-scen-quake' },
+        { key: 'fire', pillId: 'pill-scen-fire' }
+      ];
+      map.forEach((m) => {
+        const pill = document.getElementById(m.pillId);
+        if (simState.activeScenarios.has(m.key)) {
+          pill.textContent = 'ACTIVE';
+          pill.className = 'text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-red-600 text-white font-bold animate-pulse';
+        } else {
+          pill.textContent = 'Standby';
+          pill.className = 'text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold';
+        }
+      });
+    }
+
+    /*************************************************************************
+     * 13. DEPLOYMENT PROJECT FILES & ZIP GENERATOR
+     *************************************************************************/
+    const PROJECT_FILES = {
+      'app.py': `"""
+EcoGuard AI — Intelligent Home Safety and Security System
+Flask Backend Server for Render.com Deployment
+SIMULATION ONLY — NO REAL SENSORS OR EMERGENCY SERVICES CONNECTED
+"""
+import os
+import time
+import math
+from flask import Flask, send_from_directory, jsonify, request
+
+app = Flask(__name__, static_folder='static', static_url_path='')
+
+
+@app.route('/')
+def index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "system": "EcoGuard Central Controller Simulation API",
+        "mode": "SIMULATION_ONLY_NO_REAL_EMERGENCY_SERVICES",
+        "architecture": "Wired Sensors -> Central Controller -> LoRa TX -> External Stations",
+        "status": "healthy",
+        "timestamp": time.time()
+    })
+
+
+@app.route('/api/evaluate', methods=['POST'])
+def evaluate_telemetry():
+    data = request.get_json(silent=True) or {}
+    gas_ppm = float(data.get('gas_ppm', 140))
+    pga_g = float(data.get('pga_g', 0.01))
+    temp_c = float(data.get('temp_c', 24))
+
+    hazards = []
+    stations = set()
+
+    if gas_ppm >= 1000:
+        hazards.append("GAS_LEAK")
+        stations.add("FIRE_STATION")
+    if pga_g >= 0.25:
+        hazards.append("EARTHQUAKE")
+        stations.add("HOSPITAL")
+    if temp_c >= 60:
+        hazards.append("FIRE_SMOKE")
+        stations.add("FIRE_STATION")
+
+    z_sum = ((gas_ppm - 140) / 250.0) ** 2 + ((pga_g - 0.01) / 0.08) ** 2 + ((temp_c - 24) / 10.0) ** 2
+    anomaly_score = min(round(math.sqrt(z_sum) / 10.0, 3), 0.99)
+
+    return jsonify({
+        "simulation_warning": "SIMULATION ONLY — NO REAL SENSORS OR EMERGENCY SERVICES CONNECTED",
+        "local_siren_active": len(hazards) > 0,
+        "triggered_hazards": hazards,
+        "lora_target_stations": list(stations),
+        "statistical_anomaly_score": anomaly_score
+    })
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
+`,
+
+      'requirements.txt': `Flask==3.0.3
+gunicorn==22.0.0
+Werkzeug==3.0.3
+`,
+
+      'render.yaml': `services:
+  - type: web
+    name: ecoguard-ai-safety-sim
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+`,
+
+      'README.md': `# EcoGuard: Intelligent Home Safety and Security System (3D Web Simulation)
+
+> **⚠️ SAFETY & SIMULATION DISCLAIMER:**  
+> **SIMULATION ONLY — NO REAL SENSORS OR EMERGENCY SERVICES CONNECTED**  
+> All sensor values, wired connections, edge decisions, local alarms, LoRa wireless transmissions, and emergency station acknowledgements in this project are 100% simulated for academic and engineering demonstration purposes.
+
+---
+
+## 1. System Architecture
+
+\`\`\`
+[Wired Sensors inside House] ══(Physical Copper Conduits)══> [1 Central Controller] ──> [Local House Siren & Strobe]
+                                                                        │
+                                                                 [LoRa 868MHz TX]
+                                                                        ))) (Wireless RF Only)
+                                           ┌────────────────────────────┼────────────────────────────┐
+                                           ▼                            ▼                            ▼
+                                  [Fire Station RX]           [Police Station RX]           [Hospital Medical RX]
+\`\`\`
+
+- **Strict Hardware Rule:** All house sensors communicate with the **one Central Controller** exclusively via physical wired connections.
+- **LoRa Exclusivity:** LoRa wireless communication is used **exclusively** between the Central Controller's rooftop LoRa transceiver and the external receiving stations.
+
+---
+
+## 2. Local Setup & Execution
+
+1. Extract the project ZIP and navigate into the folder:
+   \`\`\`bash
+   cd ecoguard-ai
+   \`\`\`
+2. Create a virtual environment & install dependencies:
+   \`\`\`bash
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   \`\`\`
+3. Run the Flask server:
+   \`\`\`bash
+   python app.py
+   \`\`\`
+4. Open \`http://localhost:5000\` in your browser.
+`
+    };
+
+    let activeModalTab = 'app.py';
+
+    function openDeploymentModal() {
+      document.getElementById('deployment-modal').classList.remove('hidden');
+      showCodeTab('app.py');
+    }
+
+    function closeDeploymentModal() {
+      document.getElementById('deployment-modal').classList.add('hidden');
+    }
+
+    function showCodeTab(fileName) {
+      activeModalTab = fileName;
+      ['app.py', 'requirements.txt', 'render.yaml', 'README.md'].forEach((tab) => {
+        const btn = document.getElementById(`tab-btn-${tab}`);
+        if (tab === fileName) {
+          btn.className = 'px-3 py-1.5 rounded-lg font-mono text-xs bg-sky-100 text-sky-800 border border-sky-300 font-semibold cursor-pointer';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg font-mono text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer';
+        }
+      });
+      document.getElementById('modal-code-content').textContent = PROJECT_FILES[fileName];
+    }
+
+    function copyActiveCodeTab() {
+      const text = PROJECT_FILES[activeModalTab];
+      const tempArea = document.createElement('textarea');
+      tempArea.value = text;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      const copyBtn = document.getElementById('btn-copy-code');
+      copyBtn.innerHTML = '<i class="fa-solid fa-check text-emerald-400 mr-1"></i>Copied!';
+      setTimeout(() => {
+        copyBtn.innerHTML = '<i class="fa-regular fa-copy mr-1"></i>Copy File';
+      }, 1500);
+    }
+
+    async function downloadProjectZip() {
+      const btn = document.getElementById('btn-download-zip');
+      const origHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i><span>Packaging ZIP...</span>';
+
+      try {
+        const zip = new JSZip();
+        zip.file('app.py', PROJECT_FILES['app.py']);
+        zip.file('requirements.txt', PROJECT_FILES['requirements.txt']);
+        zip.file('render.yaml', PROJECT_FILES['render.yaml']);
+        zip.file('README.md', PROJECT_FILES['README.md']);
+
+        const fullHtmlSource = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        zip.folder('static').file('index.html', fullHtmlSource);
+
+        const content = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ecoguard-ai-deployable-project.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>ZIP Downloaded!</span>';
+      } catch (err) {
+        btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Error Packaging</span>';
+      }
+
+      setTimeout(() => {
+        btn.innerHTML = origHtml;
+      }, 2200);
+    }
+
+    function bootSimulation() {
+      if (threeInitialized) return;
+      initThreeJS();
+      evaluateCentralController();
+      animate();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootSimulation);
+    } else {
+      bootSimulation();
+    }
+    window.addEventListener('load', bootSimulation);
+  </script>
+</body>
+</html>
